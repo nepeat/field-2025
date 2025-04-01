@@ -14,13 +14,13 @@ x-field-client-base: &field-client-base
 
 services:
   redis:
-    image: redis:alpine
+    image: valkey/valkey:8-alpine
     volumes:
       - ./redis-data:/data
     ports:
       - "6379:6379"
     restart: always
-    command: redis-server --appendonly yes
+    command: valkey-server --appendonly yes
 
   client_field:
     <<: *field-client-base
