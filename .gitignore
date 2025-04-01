@@ -1,0 +1,4 @@
+.direnv/
+__pycache__/
+token.txt
+*.egg-info/
