@@ -1,0 +1,26 @@
+{
+    "subscribe": {
+      "id": "1596fd2b-062e-410f-a610-41ace188c7b9",
+      "data": {
+        "payload": {
+          "msg": {
+            "activePlayers": 1025,
+            "bannedPlayers": 65974,
+            "globalStandings": [
+              18723,
+              18141,
+              18167,
+              18796
+            ],
+            "teamBoxCounts": [
+              274756,
+              259238,
+              258866,
+              276000
+            ],
+            "type": "LeaderboardUpdate"
+          }
+        }
+      }
+    }
+  }

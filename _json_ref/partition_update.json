@@ -1,0 +1,30 @@
+{
+    "payload": {
+      "data": {
+        "subscribe": {
+          "id": "bc0bb5cf-5c38-4712-87e5-4be8ad6142ae",
+          "data": {
+            "payload": {
+              "msg": {
+                "key": {
+                  "challengeNumber": 1272,
+                  "kind": "deltas",
+                  "noChange": false,
+                  "partitionXY": {
+                    "x": 0,
+                    "y": 0
+                  },
+                  "pathPrefix": "platform/a1/field-app",
+                  "sequenceNumber": 9106,
+                  "subredditId": "t5_dpi2wi"
+                },
+                "type": "PartitionUpdate"
+              }
+            }
+          }
+        }
+      }
+    },
+    "id": "1",
+    "type": "data"
+  }

@@ -1,0 +1,32 @@
+{
+    "subscribe": {
+      "id": "e3dc8d67-1b2d-4701-a636-2489b16f6b3c",
+      "data": {
+        "payload": {
+          "msg": {
+            "activePlayers": 957,
+            "challengeNumber": 1738,
+            "standings": [
+              {
+                "member": 0,
+                "score": 159052
+              },
+              {
+                "member": 1,
+                "score": 153095
+              },
+              {
+                "member": 2,
+                "score": 149302
+              },
+              {
+                "member": 3,
+                "score": 160079
+              }
+            ],
+            "type": "ChallengeComplete"
+          }
+        }
+      }
+    }
+  }
