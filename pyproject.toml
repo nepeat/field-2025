@@ -9,7 +9,10 @@ dependencies = [
     "redis",
     "hiredis",
     "requests",
-    "lru-dict"
+    "httpx[http2]",
+    "lru-dict",
+    "aiofiles",
+    "ujson"
 ]
 
 [project.optional-dependencies]
