@@ -27,8 +27,8 @@ class GridConsumer(ConsumerBase):
             http2=True,
         )
 
-        # hold only 10000 urls
-        self.urls_seen = LRU(10000)
+        # hold only 1000 urls
+        self.urls_seen = LRU(1000)
 
     def get_url(
         self,
@@ -62,6 +62,7 @@ class GridConsumer(ConsumerBase):
 
         download_dir = os.path.join(
             "/mnt/data/field",
+            kind,
             str(field.subreddit_id),
             str(challenge_number),
         )
@@ -118,7 +119,7 @@ class GridConsumer(ConsumerBase):
                     self.CONSUMER_NAME,
                     self.CONSUMER_NAME + ":0",
                     {"field:stream": ">"},
-                    count=10,
+                    count=15,
                 )
 
             if not redis_messages or not redis_messages[0][1]:
