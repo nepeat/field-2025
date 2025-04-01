@@ -8,6 +8,7 @@ from gql import gql, Client
 from gql.transport.websockets import WebsocketsTransport
 
 from field import connections
+from field.fields import ALL_FIELDS
 
 if 'DEBUG' in os.environ:
     logging.basicConfig(level=logging.DEBUG)
@@ -49,20 +50,16 @@ class FieldClient:
         self.redis = connections.new_async_redis()
 
     async def main(self, current_field: str):
-        fields = {
-            "field": "d705e66b-39d3-4568-b08b-b11655c064c3",
-            "banned": "076afb2c-8aa3-4bd8-8d68-973c0169974a",
-            "banana": "233820d3-60e3-48de-94ee-8853227c003c",
-        }
-        if current_field not in fields:
+        if current_field not in ALL_FIELDS:
             raise ValueError(f"Unknown field: {current_field}")
+        field = ALL_FIELDS[current_field]
 
         variables = {
             "input": {
                 "channel": {
                     "teamOwner": "DEV_PLATFORM",
                     "category": "DEV_PLATFORM_APP_EVENTS",
-                    "tag": f"field-app:{fields[current_field]}:channel"
+                    "tag": f"field-app:{field.sub_id}:channel"
                 }
             }
         }
