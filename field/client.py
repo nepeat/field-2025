@@ -63,7 +63,7 @@ class FieldClient:
                 "channel": {
                     "teamOwner": "DEV_PLATFORM",
                     "category": "DEV_PLATFORM_APP_EVENTS",
-                    "tag": f"field-app:{field.sub_id}:channel",
+                    "tag": f"field-app:{field.socket_id}:channel",
                 }
             }
         }
