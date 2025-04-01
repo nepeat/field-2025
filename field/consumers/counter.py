@@ -6,21 +6,24 @@ from field.consumers import ConsumerBase
 
 
 class CounterConsumer(ConsumerBase):
-    CONSUMER_NAME = "consumer:counter"
+    def __init__(self):
+        super().__init__()
+
+        self.consumer_name = "consumer:counter"
 
     async def action_message(self, message_id: str, message):
         payload_wrapper = json.loads(message["message"])["subscribe"]
         payload = payload_wrapper["data"]["payload"]
         msg_type = payload["msg"]["type"]
         await self.redis.hincrby("field:message_counter", msg_type, 1)
-        await self.redis.xack("field:stream", self.CONSUMER_NAME, message_id)
+        await self.redis.xack("field:stream", self.consumer_name, message_id)
 
     async def main(self):
         # Create a consumer group
         try:
             await self.redis.xgroup_create(
                 "field:stream",
-                self.CONSUMER_NAME,
+                self.consumer_name,
                 "0",
                 mkstream=False,
             )
@@ -32,30 +35,14 @@ class CounterConsumer(ConsumerBase):
         tasks = []
 
         while True:
-            # try to get pending messages first
-            redis_messages = await self.redis.xreadgroup(
-                self.CONSUMER_NAME,
-                self.CONSUMER_NAME + ":0",
-                {"field:stream": "0"},
-                count=5,
+            stream_name, messages = await self.get_consumer_group(
+                count=100,
             )
 
-            # try get 5 unclaimed messages for the group
-            if not redis_messages[0][1]:
-                redis_messages = await self.redis.xreadgroup(
-                    self.CONSUMER_NAME,
-                    self.CONSUMER_NAME + ":0",
-                    {"field:stream": ">"},
-                    count=100,
-                )
-
-            if not redis_messages or not redis_messages[0][1]:
+            if not messages:
                 print("No messages, sleeping")
                 await asyncio.sleep(1)
                 continue
-
-            # process the messages
-            stream_name, messages = redis_messages[0]
 
             for message_id, message in messages:
                 tasks.append(self.action_message(message_id, message))

@@ -13,11 +13,12 @@ from field.fields import ALL_FIELDS, Field
 
 
 class GridConsumer(ConsumerBase):
-    CONSUMER_NAME = "consumer:grid"
-
     def __init__(self):
         super().__init__()
 
+        self.consumer_name = "consumer:grid"
+
+        # setup http client
         transport = httpx.AsyncHTTPTransport(
             retries=5,
             http2=True,
@@ -56,7 +57,7 @@ class GridConsumer(ConsumerBase):
     ):
         url = self.get_url(field, challenge_number, sequence_number, kind)
         if url in self.urls_seen and self.urls_seen[url]:
-            await self.redis.xack("field:stream", "consumer:grid", message_id)
+            await self.redis.xack("field:stream", self.consumer_name, message_id)
             return
         self.urls_seen[url] = True
 
@@ -86,14 +87,14 @@ class GridConsumer(ConsumerBase):
             await f.write(resp.content)
 
         # ack & flag
-        await self.redis.xack("field:stream", "consumer:grid", message_id)
+        await self.redis.xack("field:stream", self.consumer_name, message_id)
 
     async def main(self):
         # Create a consumer group
         try:
             await self.redis.xgroup_create(
                 "field:stream",
-                "consumer:grid",
+                self.consumer_name,
                 "0",
                 mkstream=False,
             )
@@ -105,30 +106,14 @@ class GridConsumer(ConsumerBase):
         tasks = []
 
         while True:
-            # try to get pending messages first
-            redis_messages = await self.redis.xreadgroup(
-                self.CONSUMER_NAME,
-                self.CONSUMER_NAME + ":0",
-                {"field:stream": "0"},
-                count=5,
+            stream_name, messages = await self.get_consumer_group(
+                count=15,
             )
 
-            # try get 5 unclaimed messages for the group
-            if not redis_messages[0][1]:
-                redis_messages = await self.redis.xreadgroup(
-                    self.CONSUMER_NAME,
-                    self.CONSUMER_NAME + ":0",
-                    {"field:stream": ">"},
-                    count=15,
-                )
-
-            if not redis_messages or not redis_messages[0][1]:
+            if not messages:
                 print("No messages, sleeping")
                 await asyncio.sleep(1)
                 continue
-
-            # process the messages
-            stream_name, messages = redis_messages[0]
 
             for message_id, message in messages:
                 field = ALL_FIELDS[message["field"]]
@@ -136,7 +121,9 @@ class GridConsumer(ConsumerBase):
                 payload = payload_wrapper["data"]["payload"]
                 msg_type = payload["msg"]["type"]
                 if msg_type != "PartitionUpdate":
-                    await self.redis.xack("field:stream", "consumer:grid", message_id)
+                    await self.redis.xack(
+                        "field:stream", self.consumer_name, message_id
+                    )
                     continue
 
                 partition_msg = payload["msg"]["key"]
