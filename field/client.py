@@ -8,6 +8,7 @@ from gql import gql, Client
 from gql.transport.websockets import WebsocketsTransport
 
 from field import connections
+from field.constants import MAX_MESSAGES
 from field.fields import ALL_FIELDS
 
 if "DEBUG" in os.environ:
@@ -83,7 +84,7 @@ class FieldClient:
                 await self.redis.xadd(
                     "field:stream",
                     redis_payload,
-                    maxlen=10_000_000,
+                    maxlen=MAX_MESSAGES,
                     approximate=True,
                 )
                 print(result)

@@ -1,6 +1,7 @@
 import math
 import json
 from collections import defaultdict
+from field.constants import MAX_MESSAGES
 from field import connections
 
 
@@ -26,6 +27,7 @@ for message_id, redis_message in redis.xrange("field:stream"):
 stats = {
     "message_types": type_count,
     "message_count": msgcount,
+    "remaining_messages": MAX_MESSAGES - msgcount,
     "message_avg_size": math.ceil(total_bytes / msgcount),
     "total_bytes": total_bytes,
 }
