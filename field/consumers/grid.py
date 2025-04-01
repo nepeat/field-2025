@@ -112,10 +112,10 @@ class GridConsumer(ConsumerBase):
                     self.CONSUMER_NAME,
                     self.CONSUMER_NAME + ":0",
                     {"field:stream": ">"},
-                    count=5,
+                    count=10,
                 )
 
-            if not redis_messages[0][1]:
+            if not redis_messages or not redis_messages[0][1]:
                 print("No messages, sleeping")
                 await asyncio.sleep(1)
                 continue
