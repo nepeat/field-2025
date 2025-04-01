@@ -42,3 +42,10 @@ services:
       - python
       - field/client.py
       - banana
+
+  client_whatisfield:
+    <<: *field-client-base
+    command:
+      - python
+      - field/client.py
+      - whatisfield
