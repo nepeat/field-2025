@@ -1,0 +1,11 @@
+field.owo.me {
+    root * /mnt/data/field
+    file_server {
+        browse
+    }
+    encode gzip
+    log {
+        output file /var/log/caddy/field.access.log
+        format console
+    }
+}
