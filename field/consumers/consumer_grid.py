@@ -4,21 +4,28 @@ import requests
 import os.path
 from lru import LRU
 
-from field import connections
+from requests.adapters import HTTPAdapter, Retry as HTTPRetry
+
+from field.constants import DEVVIT_BASE
+from field.consumers import ConsumerBase
 from field.fields import ALL_FIELDS, Field
-
-
-class ConsumerBase:
-    def __init__(self):
-        self.redis = connections.new_async_redis()
-
-    async def main(self):
-        raise NotImplementedError
 
 
 class GridConsumer(ConsumerBase):
     def __init__(self):
         super().__init__()
+
+        self.http = requests.Session()
+        self.http.mount(
+            DEVVIT_BASE,
+            HTTPAdapter(
+                max_retries=HTTPRetry(
+                    total=5,
+                    backoff_factor=0.5,
+                    status_forcelist=[500, 502, 503, 504],
+                )
+            ),
+        )
 
         # hold only 10000 urls
         self.urls_seen = LRU(10000)
@@ -35,7 +42,7 @@ class GridConsumer(ConsumerBase):
         else:
             kind_short = "p"
 
-        result = f"https://webview.devvit.net/a1/field-app/px_0__py_0/{field.subreddit_id}/{kind_short}/{challenge_number}/{sequence_number}"
+        result = f"{DEVVIT_BASE}/a1/field-app/px_0__py_0/{field.subreddit_id}/{kind_short}/{challenge_number}/{sequence_number}"
 
         return result
 
@@ -65,7 +72,7 @@ class GridConsumer(ConsumerBase):
 
         print(f"Downloading {url} to {download_path}")
         with open(download_path, "wb") as f:
-            resp = requests.get(url)
+            resp = self.http.get(url)
             resp.raise_for_status()
             f.write(resp.content)
 
