@@ -1,3 +1,5 @@
+import sys
+import time
 import json
 import asyncio
 import logging
@@ -46,13 +48,21 @@ class FieldClient:
 
         self.redis = connections.new_async_redis()
 
-    async def main(self):
+    async def main(self, current_field: str):
+        fields = {
+            "field": "d705e66b-39d3-4568-b08b-b11655c064c3",
+            "banned": "076afb2c-8aa3-4bd8-8d68-973c0169974a",
+            "banana": "233820d3-60e3-48de-94ee-8853227c003c",
+        }
+        if current_field not in fields:
+            raise ValueError(f"Unknown field: {current_field}")
+
         variables = {
             "input": {
                 "channel": {
                     "teamOwner": "DEV_PLATFORM",
                     "category": "DEV_PLATFORM_APP_EVENTS",
-                    "tag": "field-app:d705e66b-39d3-4568-b08b-b11655c064c3:channel"
+                    "tag": f"field-app:{fields[current_field]}:channel"
                 }
             }
         }
@@ -62,14 +72,28 @@ class FieldClient:
             fetch_schema_from_transport=False,
         ) as client:
             async for result in client.subscribe(SUBSCRIBE_QUERY, variable_values=variables):
+                redis_payload = {
+                    "message": json.dumps(result),
+                    "field": current_field,
+                    "ts": str(time.time()),
+                }
+
                 await self.redis.xadd(
                     "field:stream",
-                    {"message": json.dumps(result)},
+                    redis_payload,
                     maxlen=10_000_000,
                     approximate=True,
                 )
                 print(result)
 
 if __name__ == "__main__":
+    print("args", sys.argv)
+
+    # arg1: field
+    if len(sys.argv) > 1:
+        current_field = sys.argv[1]
+    else:
+        current_field = "field"
+
     client = FieldClient()
-    asyncio.run(client.main())
+    asyncio.run(client.main(current_field))
