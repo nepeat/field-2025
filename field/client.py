@@ -10,15 +10,17 @@ from gql.transport.websockets import WebsocketsTransport
 from field import connections
 from field.fields import ALL_FIELDS
 
-if 'DEBUG' in os.environ:
+if "DEBUG" in os.environ:
     logging.basicConfig(level=logging.DEBUG)
 else:
     logging.basicConfig(level=logging.INFO)
+
 
 def get_token() -> str:
     # TODO: how do get reddit token
     with open("token.txt", "r") as f:
         return f.read().strip()
+
 
 SUBSCRIBE_QUERY = gql("""
 subscription SubscribeSubscription($input: SubscribeInput!) {
@@ -34,6 +36,7 @@ subscription SubscribeSubscription($input: SubscribeInput!) {
     }
 }""")
 
+
 class FieldClient:
     def __init__(self):
         self.transport = WebsocketsTransport(
@@ -44,7 +47,7 @@ class FieldClient:
             },
             init_payload={
                 "Authorization": f"Bearer {get_token()}",
-            }
+            },
         )
 
         self.redis = connections.new_async_redis()
@@ -59,7 +62,7 @@ class FieldClient:
                 "channel": {
                     "teamOwner": "DEV_PLATFORM",
                     "category": "DEV_PLATFORM_APP_EVENTS",
-                    "tag": f"field-app:{field.sub_id}:channel"
+                    "tag": f"field-app:{field.sub_id}:channel",
                 }
             }
         }
@@ -68,7 +71,9 @@ class FieldClient:
             transport=self.transport,
             fetch_schema_from_transport=False,
         ) as client:
-            async for result in client.subscribe(SUBSCRIBE_QUERY, variable_values=variables):
+            async for result in client.subscribe(
+                SUBSCRIBE_QUERY, variable_values=variables
+            ):
                 redis_payload = {
                     "message": json.dumps(result),
                     "field": current_field,
@@ -82,6 +87,7 @@ class FieldClient:
                     approximate=True,
                 )
                 print(result)
+
 
 if __name__ == "__main__":
     print("args", sys.argv)

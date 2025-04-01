@@ -1,6 +1,4 @@
-import math
 import json
-from collections import defaultdict
 from field import connections
 
 
@@ -18,7 +16,7 @@ for message_id, redis_message in redis.xrange("field:stream"):
     message_type = payload["data"]["payload"]["msg"]["type"]
     if message_type in seen:
         continue
-    
+
     # print
     print(redis_message["message"])
     seen.add(message_type)
