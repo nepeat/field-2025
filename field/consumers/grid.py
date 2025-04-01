@@ -55,7 +55,7 @@ class GridConsumer(ConsumerBase):
         message_id: str,
     ):
         url = self.get_url(field, challenge_number, sequence_number, kind)
-        if url in self.urls_seen:
+        if url in self.urls_seen and self.urls_seen[url]:
             await self.redis.xack("field:stream", "consumer:grid", message_id)
             return
         self.urls_seen[url] = True
@@ -74,11 +74,17 @@ class GridConsumer(ConsumerBase):
 
         print(f"Downloading {url} to {download_path}")
         resp = await self.http.get(url)
+        # we can retry again in the pending queue
+        if resp.status_code in [503]:
+            print(f"Got {resp.status_code} for {url}, retrying later")
+            self.urls_seen[url] = False
+            return
         resp.raise_for_status()
 
         async with aiofiles.open(download_path, "wb") as f:
             await f.write(resp.content)
 
+        # ack & flag
         await self.redis.xack("field:stream", "consumer:grid", message_id)
 
     async def main(self):
