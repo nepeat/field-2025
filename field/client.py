@@ -6,6 +6,7 @@ import logging
 import os
 from gql import gql, Client
 from gql.transport.websockets import WebsocketsTransport
+from gql.transport.websockets import log as websockets_logger
 
 from field import connections
 from field.constants import MAX_MESSAGES
@@ -15,6 +16,7 @@ if "DEBUG" in os.environ:
     logging.basicConfig(level=logging.DEBUG)
 else:
     logging.basicConfig(level=logging.INFO)
+    websockets_logger.setLevel(logging.WARNING)
 
 
 def get_token() -> str:
