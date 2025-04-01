@@ -22,6 +22,12 @@ services:
     restart: always
     command: valkey-server --appendonly yes
 
+  consumer_counter:
+    <<: *field-client-base
+    command:
+      - python
+      - field/consumers/counter.py
+
   client_field:
     <<: *field-client-base
     command:
