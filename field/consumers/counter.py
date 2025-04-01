@@ -46,7 +46,7 @@ class CounterConsumer(ConsumerBase):
                     self.CONSUMER_NAME,
                     self.CONSUMER_NAME + ":0",
                     {"field:stream": ">"},
-                    count=10,
+                    count=100,
                 )
 
             if not redis_messages or not redis_messages[0][1]:
