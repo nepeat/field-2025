@@ -2,6 +2,7 @@ import json
 import asyncio
 import requests
 import os.path
+from lru import LRU
 
 from field import connections
 from field.fields import ALL_FIELDS, Field
@@ -16,6 +17,12 @@ class ConsumerBase:
 
 
 class GridConsumer(ConsumerBase):
+    def __init__(self):
+        super().__init__()
+
+        # hold only 10000 urls
+        self.urls_seen = LRU(10000)
+
     def get_url(
         self,
         field: Field,
@@ -39,6 +46,11 @@ class GridConsumer(ConsumerBase):
         sequence_number: int,
         kind: str,
     ):
+        url = self.get_url(field, challenge_number, sequence_number, kind)
+        if url in self.urls_seen:
+            return
+        self.urls_seen[url] = True
+
         download_dir = os.path.join(
             "/mnt/data/field",
             str(field.subreddit_id),
@@ -51,7 +63,6 @@ class GridConsumer(ConsumerBase):
             str(sequence_number),
         )
 
-        url = self.get_url(field, challenge_number, sequence_number, kind)
         print(f"Downloading {url} to {download_path}")
         with open(download_path, "wb") as f:
             resp = requests.get(url)
@@ -62,6 +73,9 @@ class GridConsumer(ConsumerBase):
         last_marker = await self.redis.get("consumer:grid:last_marker")
         if last_marker is None:
             last_marker = "0-0"
+            print("Starting from beginning, no marker found")
+        else:
+            print(f"Starting from marker {last_marker}")
 
         # iterate through the redis stream
         while True:
@@ -91,7 +105,7 @@ class GridConsumer(ConsumerBase):
                 )
                 # save the marker
                 last_marker = message_id
-                # await self.redis.set("consumer:grid:last_marker", last_marker)
+                await self.redis.set("consumer:grid:last_marker", last_marker)
 
 
 if __name__ == "__main__":
