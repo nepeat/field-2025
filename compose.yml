@@ -1,5 +1,17 @@
 version: '3.8'
 
+x-field-client-base: &field-client-base
+  image: field_client
+  build: .
+  environment:
+    REDIS_HOST: redis
+    REDIS_PORT: 6379
+  restart: always
+  volumes:
+    - ./token.txt:/app/token.txt
+  depends_on:
+    - redis
+
 services:
   redis:
     image: redis:alpine
@@ -7,4 +19,26 @@ services:
       - ./redis-data:/data
     ports:
       - "6379:6379"
+    restart: always
     command: redis-server --appendonly yes
+
+  client_field:
+    <<: *field-client-base
+    command:
+      - python
+      - field/client.py
+      - field
+
+  client_banned:
+    <<: *field-client-base
+    command:
+      - python
+      - field/client.py
+      - banned
+
+  client_banana:
+    <<: *field-client-base
+    command:
+      - python
+      - field/client.py
+      - banana
