@@ -1,0 +1,23 @@
+{
+    "subscribe": {
+        "id": "bcbeb2af-6f2b-4ed8-bcc1-14205e1574ab",
+        "data": {
+            "payload": {
+                "msg": {
+                    "config": {
+                        "globalActivePlayerHeartbeatMillis": 30000,
+                        "globalClickCooldownMillis": 100,
+                        "globalPDFDebug": 0,
+                        "globalPDFGuessAfterMillis": 10000,
+                        "globalPDFGuessOffsetMillis": -1000,
+                        "globalPDFMaxDroppedPatches": 5,
+                        "globalPDFMaxParallelFetches": 4,
+                        "globalPDFMaxPatchesWithoutReplace": 100,
+                        "globalReloadSequence": 0
+                    },
+                    "type": "ConfigUpdate"
+                }
+            }
+        }
+    }
+}
