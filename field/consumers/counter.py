@@ -8,6 +8,13 @@ from field.consumers import ConsumerBase
 class CounterConsumer(ConsumerBase):
     CONSUMER_NAME = "consumer:counter"
 
+    async def action_message(self, message_id: str, message):
+        payload_wrapper = json.loads(message["message"])["subscribe"]
+        payload = payload_wrapper["data"]["payload"]
+        msg_type = payload["msg"]["type"]
+        await self.redis.hincrby("field:message_counter", msg_type, 1)
+        await self.redis.xack("field:stream", self.CONSUMER_NAME, message_id)
+
     async def main(self):
         # Create a consumer group
         try:
@@ -22,6 +29,8 @@ class CounterConsumer(ConsumerBase):
                 raise e
 
         # iterate through the redis stream
+        tasks = []
+
         while True:
             # try to get pending messages first
             redis_messages = await self.redis.xreadgroup(
@@ -37,10 +46,10 @@ class CounterConsumer(ConsumerBase):
                     self.CONSUMER_NAME,
                     self.CONSUMER_NAME + ":0",
                     {"field:stream": ">"},
-                    count=5,
+                    count=10,
                 )
 
-            if not redis_messages[0][1]:
+            if not redis_messages or not redis_messages[0][1]:
                 print("No messages, sleeping")
                 await asyncio.sleep(1)
                 continue
@@ -49,11 +58,10 @@ class CounterConsumer(ConsumerBase):
             stream_name, messages = redis_messages[0]
 
             for message_id, message in messages:
-                payload_wrapper = json.loads(message["message"])["subscribe"]
-                payload = payload_wrapper["data"]["payload"]
-                msg_type = payload["msg"]["type"]
-                await self.redis.hincrby("field:message_counter", msg_type, 1)
-                await self.redis.xack("field:stream", self.CONSUMER_NAME, message_id)
+                tasks.append(self.action_message(message_id, message))
+
+            await asyncio.gather(*tasks)
+            tasks.clear()
 
 
 if __name__ == "__main__":
