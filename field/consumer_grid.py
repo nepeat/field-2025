@@ -1,5 +1,7 @@
 import json
 import asyncio
+import requests
+import os.path
 
 from field import connections
 from field.fields import ALL_FIELDS, Field
@@ -14,10 +16,47 @@ class ConsumerBase:
 
 
 class GridConsumer(ConsumerBase):
-    def get_url(self, field: Field, challenge_number: int, sequence_number: int):
-        result = f"https://webview.devvit.net/a1/field-app/px_0__py_0/{field.subreddit_id}/p/{challenge_number}/45620"
+    def get_url(
+        self,
+        field: Field,
+        challenge_number: int,
+        sequence_number: int,
+        kind: str,
+    ):
+        if kind == "deltas":
+            kind_short = "d"
+        else:
+            kind_short = "p"
+
+        result = f"https://webview.devvit.net/a1/field-app/px_0__py_0/{field.subreddit_id}/{kind_short}/{challenge_number}/{sequence_number}"
 
         return result
+
+    async def download_grid(
+        self,
+        field: Field,
+        challenge_number: int,
+        sequence_number: int,
+        kind: str,
+    ):
+        download_dir = os.path.join(
+            "/mnt/data/field",
+            str(field.subreddit_id),
+            str(challenge_number),
+        )
+        os.makedirs(download_dir, exist_ok=True)
+
+        download_path = os.path.join(
+            download_dir,
+            str(sequence_number),
+        )
+
+        url = self.get_url(field, challenge_number, sequence_number, kind)
+        print(f"Downloading {url} to {download_path}")
+        with open(download_path, "wb") as f:
+            resp = requests.get(url)
+            resp.raise_for_status()
+            f.write(resp.content)
 
     async def main(self):
         last_marker = await self.redis.get("consumer:grid:last_marker")
@@ -43,8 +82,13 @@ class GridConsumer(ConsumerBase):
                 partition_msg = payload["msg"]["key"]
                 sequence_number = partition_msg["sequenceNumber"]
                 challenge_number = partition_msg["challengeNumber"]
-                url = self.get_url(field, challenge_number, sequence_number)
-                print(url)
+                kind = partition_msg["kind"]
+                await self.download_grid(
+                    field,
+                    challenge_number,
+                    sequence_number,
+                    kind,
+                )
                 # save the marker
                 last_marker = message_id
                 # await self.redis.set("consumer:grid:last_marker", last_marker)

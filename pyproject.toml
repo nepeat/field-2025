@@ -7,7 +7,8 @@ dependencies = [
     "websockets",
     "gql[all]",
     "redis",
-    "hiredis"
+    "hiredis",
+    "requests"
 ]
 
 [project.optional-dependencies]
