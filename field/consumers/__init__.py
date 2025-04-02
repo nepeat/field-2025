@@ -47,25 +47,25 @@ class ConsumerBase:
         if not self.consumer_name:
             raise ValueError("Consumer name is not defined for consumer.")
 
-        # try to get pending messages first
+        # get the latest messages first
         redis_messages = await self.redis.xreadgroup(
             self.consumer_name,
             self.consumer_id,
-            {"field:stream": "0"},
+            {"field:stream": ">"},
             count=count,
         )
 
-        if not redis_messages[0][1]:
-            # try to get messages from xpending too
+        # try to get pending messages next
+        if not redis_messages or not redis_messages[0][1]:
             redis_messages = await self.redis.xreadgroup(
                 self.consumer_name,
                 self.consumer_id,
-                {"field:stream": ">"},
+                {"field:stream": "0"},
                 count=count,
             )
 
         # HACK: Return empty list if no messages
-        if not redis_messages:
+        if not redis_messages or not redis_messages[0][1]:
             return "field:stream", []
 
         return redis_messages[0]

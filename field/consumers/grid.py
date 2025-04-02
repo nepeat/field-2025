@@ -5,6 +5,8 @@ import httpx
 import os.path
 from lru import LRU
 
+from aiolimiter import AsyncLimiter
+
 from sqlalchemy.dialects.postgresql import insert
 
 from field.consumers import ConsumerBase
@@ -31,6 +33,9 @@ class GridConsumer(ConsumerBase):
 
         # hold only 1000 urls
         self.urls_seen = LRU(1000)
+
+        # limit to 10 qps
+        self.fetch_limit = AsyncLimiter(30, 1)
 
         # set db to not require commits
         self.db = sm_autocommit()
@@ -63,12 +68,14 @@ class GridConsumer(ConsumerBase):
 
         # check if the file exists and is larger than 0 bytes
         try:
-            file_exists = os.path.getsize(download_path) > 0
+            # file_exists = os.path.getsize(download_path) > 0
+            file_exists = False
         except FileNotFoundError:
             file_exists = False
 
         if not file_exists:
             print(f"Downloading {url} to {download_path}")
+            await self.fetch_limit.acquire()
             resp = await self.http.get(url)
             # we can retry again in the pending queue
             if resp.status_code in [503]:
@@ -124,7 +131,7 @@ class GridConsumer(ConsumerBase):
 
         # iterate through the redis stream
         tasks = []
-        for x in range(0, 8):
+        for x in range(0, 16):
             tasks.append(asyncio.create_task(self.processor()))
 
         while self.running:

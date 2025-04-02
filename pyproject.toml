@@ -15,11 +15,16 @@ dependencies = [
     "orjson",
     "sqlalchemy[asyncio]<3",
     "asyncpg",
-    "alembic"
+    "alembic",
+    "aiolimiter"
 ]
+
+[tool.setuptools]
+packages = ["field"]
 
 [project.optional-dependencies]
 dev = [
     "ruff",
-    "pre-commit"
+    "pre-commit",
+    "honcho"
 ]
