@@ -73,9 +73,9 @@ class GridConsumer(ConsumerBase):
         self.urls_seen[url] = True
 
         download_dir = os.path.join(
-            "/mnt/data/field",
-            kind,
+            f"/mnt/data/field/px_{partition_x}_py_{partition_y}",
             str(field.subreddit_id),
+            kind,
             str(challenge_number),
         )
         os.makedirs(download_dir, exist_ok=True)
