@@ -13,7 +13,9 @@ dependencies = [
     "lru-dict",
     "aiofiles",
     "orjson",
-    "sqlalchemy[asyncio]<3"
+    "sqlalchemy[asyncio]<3",
+    "asyncpg",
+    "alembic"
 ]
 
 [project.optional-dependencies]

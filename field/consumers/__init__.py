@@ -44,7 +44,7 @@ class ConsumerBase:
             self.consumer_name,
             self.consumer_name + ":0",
             {"field:stream": "0"},
-            count=5,
+            count=count,
         )
 
         if not redis_messages[0][1]:
