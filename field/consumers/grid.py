@@ -135,7 +135,7 @@ class GridConsumer(ConsumerBase):
 
         # iterate through the redis stream
         tasks = []
-        for x in range(0, 10):
+        for x in range(0, 12):
             tasks.append(asyncio.create_task(self.processor()))
 
         while self.running:
