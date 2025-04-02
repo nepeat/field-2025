@@ -17,6 +17,7 @@ class GridConsumer(ConsumerBase):
         super().__init__()
 
         self.consumer_name = "consumer:grid"
+        self.queue = asyncio.Queue(maxsize=10)
 
         # setup http client
         transport = httpx.AsyncHTTPTransport(
@@ -100,6 +101,39 @@ class GridConsumer(ConsumerBase):
         # ack & flag
         await self.redis.xack("field:stream", self.consumer_name, message_id)
 
+    async def processor(self):
+        while self.running:
+            data_tuple = await self.queue.get()
+            message_id: str = data_tuple[0]
+            message: dict = data_tuple[1]
+
+            field = ALL_FIELDS[message["field"]]
+            payload_wrapper = json.loads(message["message"])["subscribe"]
+            payload = payload_wrapper["data"]["payload"]
+            msg_type = payload["msg"]["type"]
+            if msg_type != "PartitionUpdate":
+                await self.redis.xack("field:stream", self.consumer_name, message_id)
+                continue
+
+            partition_msg = payload["msg"]["key"]
+            sequence_number = partition_msg["sequenceNumber"]
+            challenge_number = partition_msg["challengeNumber"]
+            kind = partition_msg["kind"]
+
+            partition_xy = partition_msg["partitionXY"]
+            partition_x = partition_xy["x"]
+            partition_y = partition_xy["y"]
+
+            await self.download_grid(
+                field,
+                partition_x,
+                partition_y,
+                challenge_number,
+                sequence_number,
+                kind,
+                message_id,
+            )
+
     async def main(self):
         # Create a consumer group
         try:
@@ -115,8 +149,10 @@ class GridConsumer(ConsumerBase):
 
         # iterate through the redis stream
         tasks = []
+        for x in range(0, 4):
+            tasks.append(asyncio.create_task(self.processor()))
 
-        while True:
+        while self.running:
             stream_name, messages = await self.get_consumer_group(
                 count=15,
             )
@@ -127,39 +163,9 @@ class GridConsumer(ConsumerBase):
                 continue
 
             for message_id, message in messages:
-                field = ALL_FIELDS[message["field"]]
-                payload_wrapper = json.loads(message["message"])["subscribe"]
-                payload = payload_wrapper["data"]["payload"]
-                msg_type = payload["msg"]["type"]
-                if msg_type != "PartitionUpdate":
-                    await self.redis.xack(
-                        "field:stream", self.consumer_name, message_id
-                    )
-                    continue
+                await self.queue.put((message_id, message))
 
-                partition_msg = payload["msg"]["key"]
-                sequence_number = partition_msg["sequenceNumber"]
-                challenge_number = partition_msg["challengeNumber"]
-                kind = partition_msg["kind"]
-
-                partition_xy = partition_msg["partitionXY"]
-                partition_x = partition_xy["x"]
-                partition_y = partition_xy["y"]
-
-                tasks.append(
-                    self.download_grid(
-                        field,
-                        partition_x,
-                        partition_y,
-                        challenge_number,
-                        sequence_number,
-                        kind,
-                        message_id,
-                    )
-                )
-
-            await asyncio.gather(*tasks)
-            tasks.clear()
+        await asyncio.gather(*tasks)
 
 
 if __name__ == "__main__":

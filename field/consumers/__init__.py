@@ -1,3 +1,4 @@
+from typing import List, Tuple
 from field import connections
 
 
@@ -5,8 +6,9 @@ class ConsumerBase:
     def __init__(self):
         self.redis = connections.new_async_redis()
         self.consumer_name = None
+        self.running = True
 
-    async def get_consumer_group(self, count: int = 15):
+    async def get_consumer_group(self, count: int = 15) -> Tuple[str, List[dict]]:
         if not self.consumer_name:
             raise ValueError("Consumer name is not defined for consumer.")
 
