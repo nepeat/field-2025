@@ -20,6 +20,11 @@ else:
 
 
 def get_token() -> str:
+    redis = connections.new_redis()
+    redis_token = redis.get("cookie:tokenv2")
+    if redis_token:
+        return redis_token
+
     # TODO: how do get reddit token
     with open("token.txt", "r") as f:
         return f.read().strip()
