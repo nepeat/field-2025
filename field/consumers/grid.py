@@ -16,7 +16,6 @@ class GridConsumer(ConsumerBase):
         super().__init__()
 
         self.consumer_name = "consumer:grid"
-        self.queue = asyncio.Queue(maxsize=10)
 
         # setup http client
         transport = httpx.AsyncHTTPTransport(
@@ -101,7 +100,7 @@ class GridConsumer(ConsumerBase):
         await self.redis.xack("field:stream", self.consumer_name, message_id)
 
     async def processor(self):
-        while self.running:
+        while self.running or not self.queue.empty():
             data_tuple = await self.queue.get()
             message_id: str = data_tuple[0]
             message: dict = data_tuple[1]
@@ -133,7 +132,10 @@ class GridConsumer(ConsumerBase):
                 message_id,
             )
 
-    async def main(self):
+        if not self.running:
+            self.queue.shutdown()
+
+    async def run(self):
         await self.ensure_group_exists()
 
         # iterate through the redis stream
@@ -153,8 +155,6 @@ class GridConsumer(ConsumerBase):
 
             for message_id, message in messages:
                 await self.queue.put((message_id, message))
-
-        await asyncio.gather(*tasks)
 
 
 if __name__ == "__main__":

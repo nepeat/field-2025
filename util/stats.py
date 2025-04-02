@@ -1,4 +1,4 @@
-import ujson as json
+import json
 from collections import defaultdict
 from field.constants import MAX_MESSAGES
 from field import connections

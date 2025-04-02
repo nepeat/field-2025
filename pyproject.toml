@@ -12,7 +12,7 @@ dependencies = [
     "httpx[http2]",
     "lru-dict",
     "aiofiles",
-    "ujson",
+    "orjson",
     "sqlalchemy[asyncio]<3"
 ]
 

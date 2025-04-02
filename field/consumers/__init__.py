@@ -1,3 +1,5 @@
+import signal
+import asyncio
 from typing import List, Tuple
 from field import connections
 
@@ -9,6 +11,13 @@ class ConsumerBase:
         self.redis = connections.new_async_redis()
         self.consumer_name = ""
         self.running = True
+
+        self.queue = asyncio.Queue(maxsize=10)
+        self.tasks: List[asyncio.Task] = []
+
+    def _signal_handler(self, signum, frame):
+        print(f"Received signal {signum}, shutting down...")
+        self.running = False
 
     async def ensure_group_exists(self):
         if not self.consumer_name:
@@ -53,5 +62,20 @@ class ConsumerBase:
 
         return redis_messages[0]
 
-    async def main(self):
+    async def run(self):
         raise NotImplementedError
+
+    async def main(self):
+        # Register signal handlers
+        signal.signal(signal.SIGINT, self._signal_handler)
+        signal.signal(signal.SIGTERM, self._signal_handler)
+
+        try:
+            await self.run()
+        except Exception as e:
+            print(f"Error in consumer: {e}")
+            self.running = False
+            raise
+
+        print("Waiting for own tasks to complete.")
+        await asyncio.gather(*self.tasks)
