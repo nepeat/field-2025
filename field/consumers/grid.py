@@ -34,6 +34,8 @@ class GridConsumer(ConsumerBase):
     def get_url(
         self,
         field: Field,
+        partition_x: int,
+        partition_y: int,
         challenge_number: int,
         sequence_number: int,
         kind: str,
@@ -43,19 +45,28 @@ class GridConsumer(ConsumerBase):
         else:
             kind_short = "p"
 
-        result = f"{DEVVIT_BASE}/a1/field-app/px_0__py_0/{field.subreddit_id}/{kind_short}/{challenge_number}/{sequence_number}"
+        result = f"{DEVVIT_BASE}/a1/field-app/px_{partition_x}__py_{partition_y}/{field.subreddit_id}/{kind_short}/{challenge_number}/{sequence_number}"
 
         return result
 
     async def download_grid(
         self,
         field: Field,
+        partition_x: int,
+        partition_y: int,
         challenge_number: int,
         sequence_number: int,
         kind: str,
         message_id: str,
     ):
-        url = self.get_url(field, challenge_number, sequence_number, kind)
+        url = self.get_url(
+            field,
+            partition_x,
+            partition_y,
+            challenge_number,
+            sequence_number,
+            kind,
+        )
         if url in self.urls_seen and self.urls_seen[url]:
             await self.redis.xack("field:stream", self.consumer_name, message_id)
             return
@@ -130,9 +141,16 @@ class GridConsumer(ConsumerBase):
                 sequence_number = partition_msg["sequenceNumber"]
                 challenge_number = partition_msg["challengeNumber"]
                 kind = partition_msg["kind"]
+
+                partition_xy = partition_msg["partitionXY"]
+                partition_x = partition_xy["x"]
+                partition_y = partition_xy["y"]
+
                 tasks.append(
                     self.download_grid(
                         field,
+                        partition_x,
+                        partition_y,
                         challenge_number,
                         sequence_number,
                         kind,
