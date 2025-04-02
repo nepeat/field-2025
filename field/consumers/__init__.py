@@ -14,7 +14,7 @@ class ConsumerBase:
         self.consumer_name = ""
         self.running = True
 
-        self.queue = asyncio.Queue(maxsize=10)
+        self.queue = asyncio.Queue(maxsize=64)
         self.tasks: List[asyncio.Task] = []
 
     def _signal_handler(self, signum, frame):

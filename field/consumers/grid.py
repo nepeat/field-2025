@@ -47,6 +47,7 @@ class GridConsumer(ConsumerBase):
             return
         self.urls_seen[url] = True
 
+        # make sure the download dir exists
         download_dir = os.path.join(
             f"/mnt/data/field/px_{partition.partition_x}_py_{partition.partition_y}",
             str(field.subreddit_id),
@@ -60,17 +61,26 @@ class GridConsumer(ConsumerBase):
             str(partition.sequenceNumber),
         )
 
-        print(f"Downloading {url} to {download_path}")
-        resp = await self.http.get(url)
-        # we can retry again in the pending queue
-        if resp.status_code in [503]:
-            print(f"Got {resp.status_code} for {url}, retrying later")
-            self.urls_seen[url] = False
-            return
-        resp.raise_for_status()
+        # check if the file exists and is larger than 0 bytes
+        try:
+            file_exists = os.path.getsize(download_path) > 0
+        except FileNotFoundError:
+            file_exists = False
 
-        async with aiofiles.open(download_path, "wb") as f:
-            await f.write(resp.content)
+        if not file_exists:
+            print(f"Downloading {url} to {download_path}")
+            resp = await self.http.get(url)
+            # we can retry again in the pending queue
+            if resp.status_code in [503]:
+                print(f"Got {resp.status_code} for {url}, retrying later")
+                self.urls_seen[url] = False
+                return
+            resp.raise_for_status()
+
+            async with aiofiles.open(download_path, "wb") as f:
+                await f.write(resp.content)
+        else:
+            print(f"Skipping download for {url} as it exists.")
 
         # save this to the DB
         statement = (
@@ -114,12 +124,12 @@ class GridConsumer(ConsumerBase):
 
         # iterate through the redis stream
         tasks = []
-        for x in range(0, 12):
+        for x in range(0, 16):
             tasks.append(asyncio.create_task(self.processor()))
 
         while self.running:
             stream_name, messages = await self.get_consumer_group(
-                count=15,
+                count=128,
             )
 
             if not messages:
