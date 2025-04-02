@@ -1,4 +1,3 @@
-import redis
 import json
 import asyncio
 
@@ -24,16 +23,7 @@ class CounterConsumer(ConsumerBase):
         await self.redis.xgroup_destroy("field:stream", self.consumer_name)
 
         # Create a consumer group
-        try:
-            await self.redis.xgroup_create(
-                "field:stream",
-                self.consumer_name,
-                "0",
-                mkstream=False,
-            )
-        except redis.exceptions.ResponseError as e:
-            if e.args[0] != "BUSYGROUP Consumer Group name already exists":
-                raise e
+        await self.ensure_group_exists()
 
         # iterate through the redis stream
         tasks = []
