@@ -58,6 +58,7 @@ class GridConsumer(ConsumerBase):
         self.http = httpx.AsyncClient(
             transport=transport,
             http2=True,
+            headers={"User-Agent": "u/nepeat field2025 grid backfiller"},
         )
 
         # hold only 1000 urls
@@ -134,7 +135,7 @@ class GridConsumer(ConsumerBase):
 
         # iterate through the redis stream
         tasks = []
-        for x in range(0, 4):
+        for x in range(0, 10):
             tasks.append(asyncio.create_task(self.processor()))
 
         while self.running:
