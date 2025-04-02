@@ -7,8 +7,6 @@ x-field-client-base: &field-client-base
     REDIS_HOST: redis
     REDIS_PORT: 6379
   restart: always
-  volumes:
-    - ./token.txt:/app/token.txt
   depends_on:
     - redis
 
