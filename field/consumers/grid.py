@@ -6,9 +6,42 @@ import os.path
 from lru import LRU
 
 
+from dataclasses import dataclass
+
 from field.constants import DEVVIT_BASE
 from field.consumers import ConsumerBase
 from field.fields import ALL_FIELDS, Field
+
+
+@dataclass
+class PartitionUpdate:
+    challengeNumber: int
+    kind: str
+    noChange: bool
+    partitionXY: dict[str, int]
+    pathPrefix: str
+    sequenceNumber: int
+    subredditId: str
+
+    @property
+    def partition_x(self):
+        return self.partitionXY["x"]
+
+    @property
+    def partition_y(self):
+        return self.partitionXY["y"]
+
+    @property
+    def url(self):
+        if self.kind == "deltas":
+            kind_short = "d"
+        else:
+            kind_short = "p"
+
+        partition_x = self.partitionXY["x"]
+        partition_y = self.partitionXY["y"]
+
+        return f"{DEVVIT_BASE}/a1/field-app/px_{partition_x}__py_{partition_y}/{self.subredditId}/{kind_short}/{self.challengeNumber}/{self.sequenceNumber}"
 
 
 class GridConsumer(ConsumerBase):
@@ -30,58 +63,29 @@ class GridConsumer(ConsumerBase):
         # hold only 1000 urls
         self.urls_seen = LRU(1000)
 
-    def get_url(
-        self,
-        field: Field,
-        partition_x: int,
-        partition_y: int,
-        challenge_number: int,
-        sequence_number: int,
-        kind: str,
-    ):
-        if kind == "deltas":
-            kind_short = "d"
-        else:
-            kind_short = "p"
-
-        result = f"{DEVVIT_BASE}/a1/field-app/px_{partition_x}__py_{partition_y}/{field.subreddit_id}/{kind_short}/{challenge_number}/{sequence_number}"
-
-        return result
-
     async def download_grid(
         self,
         field: Field,
-        partition_x: int,
-        partition_y: int,
-        challenge_number: int,
-        sequence_number: int,
-        kind: str,
+        partition: PartitionUpdate,
         message_id: str,
     ):
-        url = self.get_url(
-            field,
-            partition_x,
-            partition_y,
-            challenge_number,
-            sequence_number,
-            kind,
-        )
+        url = partition.url
         if url in self.urls_seen and self.urls_seen[url]:
             await self.redis.xack("field:stream", self.consumer_name, message_id)
             return
         self.urls_seen[url] = True
 
         download_dir = os.path.join(
-            f"/mnt/data/field/px_{partition_x}_py_{partition_y}",
+            f"/mnt/data/field/px_{partition.partition_x}_py_{partition.partition_y}",
             str(field.subreddit_id),
-            kind,
-            str(challenge_number),
+            partition.kind,
+            str(partition.challengeNumber),
         )
         os.makedirs(download_dir, exist_ok=True)
 
         download_path = os.path.join(
             download_dir,
-            str(sequence_number),
+            str(partition.sequenceNumber),
         )
 
         print(f"Downloading {url} to {download_path}")
@@ -114,21 +118,11 @@ class GridConsumer(ConsumerBase):
                 continue
 
             partition_msg = payload["msg"]["key"]
-            sequence_number = partition_msg["sequenceNumber"]
-            challenge_number = partition_msg["challengeNumber"]
-            kind = partition_msg["kind"]
-
-            partition_xy = partition_msg["partitionXY"]
-            partition_x = partition_xy["x"]
-            partition_y = partition_xy["y"]
+            partition = PartitionUpdate(**partition_msg)
 
             await self.download_grid(
                 field,
-                partition_x,
-                partition_y,
-                challenge_number,
-                sequence_number,
-                kind,
+                partition,
                 message_id,
             )
 
