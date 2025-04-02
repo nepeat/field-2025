@@ -13,8 +13,8 @@ from field.model import FieldPartitionUpdate, sm_autocommit
 
 
 class GridConsumer(ConsumerBase):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, consumer_id: int):
+        super().__init__(consumer_id)
 
         self.consumer_name = "consumer:grid"
 
@@ -124,12 +124,12 @@ class GridConsumer(ConsumerBase):
 
         # iterate through the redis stream
         tasks = []
-        for x in range(0, 16):
+        for x in range(0, 8):
             tasks.append(asyncio.create_task(self.processor()))
 
         while self.running:
             stream_name, messages = await self.get_consumer_group(
-                count=128,
+                count=64,
             )
 
             if not messages:
@@ -142,5 +142,7 @@ class GridConsumer(ConsumerBase):
 
 
 if __name__ == "__main__":
-    consumer = GridConsumer()
+    consumer_id = int(os.environ.get("CONSUMER_ID", "0"))
+
+    consumer = GridConsumer(consumer_id)
     asyncio.run(consumer.main())
