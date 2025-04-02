@@ -7,7 +7,7 @@ import redis
 
 
 class ConsumerBase:
-    def __init__(self):
+    def __init__(self, consumer_id: int = 0):
         self.redis = connections.new_async_redis()
         self.db = model.sm()
 
@@ -17,9 +17,15 @@ class ConsumerBase:
         self.queue = asyncio.Queue(maxsize=64)
         self.tasks: List[asyncio.Task] = []
 
+        self._consumer_id: int = consumer_id
+
     def _signal_handler(self, signum, frame):
         print(f"Received signal {signum}, shutting down...")
         self.running = False
+
+    @property
+    def consumer_id(self):
+        return f"{self.consumer_name}:{self._consumer_id}"
 
     async def ensure_group_exists(self):
         if not self.consumer_name:
@@ -44,7 +50,7 @@ class ConsumerBase:
         # try to get pending messages first
         redis_messages = await self.redis.xreadgroup(
             self.consumer_name,
-            self.consumer_name + ":0",
+            self.consumer_id,
             {"field:stream": "0"},
             count=count,
         )
@@ -53,7 +59,7 @@ class ConsumerBase:
             # try to get messages from xpending too
             redis_messages = await self.redis.xreadgroup(
                 self.consumer_name,
-                self.consumer_name + ":0",
+                self.consumer_id,
                 {"field:stream": ">"},
                 count=count,
             )
