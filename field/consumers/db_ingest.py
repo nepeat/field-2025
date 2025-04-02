@@ -17,7 +17,6 @@ class DatabaseIngestConsumer(ConsumerBase):
         super().__init__()
 
         self.consumer_name = "consumer:db_ingest"
-        self.db = model.sm()
 
     def get_reddit_id(self, message: dict):
         payload_wrapper = message["subscribe"]

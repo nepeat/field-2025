@@ -1,7 +1,7 @@
 import signal
 import asyncio
 from typing import List, Tuple
-from field import connections
+from field import connections, model
 
 import redis
 
@@ -9,6 +9,8 @@ import redis
 class ConsumerBase:
     def __init__(self):
         self.redis = connections.new_async_redis()
+        self.db = model.sm()
+
         self.consumer_name = ""
         self.running = True
 

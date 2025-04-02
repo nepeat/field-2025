@@ -5,43 +5,11 @@ import httpx
 import os.path
 from lru import LRU
 
+from sqlalchemy.dialects.postgresql import insert
 
-from dataclasses import dataclass
-
-from field.constants import DEVVIT_BASE
 from field.consumers import ConsumerBase
 from field.fields import ALL_FIELDS, Field
-
-
-@dataclass
-class PartitionUpdate:
-    challengeNumber: int
-    kind: str
-    noChange: bool
-    partitionXY: dict[str, int]
-    pathPrefix: str
-    sequenceNumber: int
-    subredditId: str
-
-    @property
-    def partition_x(self):
-        return self.partitionXY["x"]
-
-    @property
-    def partition_y(self):
-        return self.partitionXY["y"]
-
-    @property
-    def url(self):
-        if self.kind == "deltas":
-            kind_short = "d"
-        else:
-            kind_short = "p"
-
-        partition_x = self.partitionXY["x"]
-        partition_y = self.partitionXY["y"]
-
-        return f"{DEVVIT_BASE}/a1/field-app/px_{partition_x}__py_{partition_y}/{self.subredditId}/{kind_short}/{self.challengeNumber}/{self.sequenceNumber}"
+from field.model import FieldPartitionUpdate, sm_autocommit
 
 
 class GridConsumer(ConsumerBase):
@@ -64,10 +32,13 @@ class GridConsumer(ConsumerBase):
         # hold only 1000 urls
         self.urls_seen = LRU(1000)
 
+        # set db to not require commits
+        self.db = sm_autocommit()
+
     async def download_grid(
         self,
         field: Field,
-        partition: PartitionUpdate,
+        partition: FieldPartitionUpdate,
         message_id: str,
     ):
         url = partition.url
@@ -101,6 +72,14 @@ class GridConsumer(ConsumerBase):
         async with aiofiles.open(download_path, "wb") as f:
             await f.write(resp.content)
 
+        # save this to the DB
+        statement = (
+            insert(FieldPartitionUpdate)
+            .values(partition.to_dict())
+            .on_conflict_do_nothing()
+        )
+        await self.db.execute(statement)
+
         # ack & flag
         await self.redis.xack("field:stream", self.consumer_name, message_id)
 
@@ -119,7 +98,7 @@ class GridConsumer(ConsumerBase):
                 continue
 
             partition_msg = payload["msg"]["key"]
-            partition = PartitionUpdate(**partition_msg)
+            partition = FieldPartitionUpdate.from_payload(partition_msg)
 
             await self.download_grid(
                 field,
