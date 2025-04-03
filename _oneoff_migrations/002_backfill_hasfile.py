@@ -6,7 +6,7 @@ import glob
 
 from sqlalchemy.sql import select
 
-from field.model import sm, FieldPartitionUpdate
+from field.model import sm, sm_autocommit, FieldPartitionUpdate
 
 
 @lru_cache(maxsize=128)
@@ -18,14 +18,12 @@ def get_files(path):
 
 async def main():
     db = sm()
-    db_update = sm()
+    db_update = sm_autocommit()
     partitions = await db.stream_scalars(
         select(FieldPartitionUpdate).filter(FieldPartitionUpdate.has_file == False)  # noqa: E712
     )
 
-    i = 0
-
-    async for partition in partitions.yield_per(1024):
+    async for partition in partitions.yield_per(1024 * 10):
         # update the object's db session
         partition = await db_update.merge(partition, load=False)
 
@@ -48,14 +46,6 @@ async def main():
             partition.has_file = True
         else:
             print("Did not find file for ", partition.url)
-
-        # commit every 1024
-        i += 1
-        if i % 1024 == 0:
-            print(f"Commiting. Processed {i} items.")
-            await db_update.commit()
-
-    await db_update.commit()
 
 
 if __name__ == "__main__":
