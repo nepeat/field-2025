@@ -4,3 +4,4 @@ token.txt
 *.egg-info/
 redis-data/
 .env_secret
+logs/

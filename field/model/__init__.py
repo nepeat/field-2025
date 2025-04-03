@@ -68,6 +68,9 @@ class FieldPartitionUpdate(DictableBase):
     has_file: Mapped[bool] = mapped_column(
         default=False, server_default=expression.false()
     )
+    is_backfill: Mapped[bool] = mapped_column(
+        default=False, server_default=expression.false()
+    )
 
     @classmethod
     def from_payload(cls, message: dict):
