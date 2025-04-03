@@ -90,6 +90,7 @@ class GridConsumer(ConsumerBase):
             print(f"Skipping download for {url} as it exists.")
 
         # save this to the DB
+        partition.has_file = True
         statement = (
             insert(FieldPartitionUpdate)
             .values(partition.to_dict())

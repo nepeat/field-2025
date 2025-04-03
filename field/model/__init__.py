@@ -4,6 +4,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.sql import expression
 
 from field.constants import DEVVIT_BASE
 
@@ -64,6 +65,9 @@ class FieldPartitionUpdate(DictableBase):
     sequenceNumber: Mapped[int] = mapped_column(primary_key=True)
     noChange: Mapped[bool]
     pathPrefix: Mapped[str]
+    has_file: Mapped[bool] = mapped_column(
+        default=False, server_default=expression.false()
+    )
 
     @classmethod
     def from_payload(cls, message: dict):
